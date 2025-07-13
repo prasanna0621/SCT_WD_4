@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To-Do App</title>
+  <style>
+    :root {
+      --bg-dark: #1e1e2f;
+      --bg-light: #e3f2fd;
+      --text-dark: #ffffff;
+      --text-light: #333333;
+      --task-bg-dark: #2e2e3e;
+      --task-bg-light: #ffffff;
+      --accent: #4db6ac;
+      --delete: #f44336;
+      --edit: #81c784;
+      --category: #ffca28;
+    }
+    body.light {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      background-color: var(--task-bg-light);
+    }
+    .dark .container {
+      background-color: var(--task-bg-dark);
+    }
+    h1 {
+      text-align: center;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .inputs input {
+      flex: 1;
+      min-width: 150px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .filter-theme-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    input, button, select {
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      transition: transform 0.2s ease;
+      cursor: pointer;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    .filter-theme-row select,
+    .filter-theme-row button {
+      flex: 1;
+      max-width: 150px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+      background: #f9f9f9;
+      flex-wrap: wrap;
+    }
+    .dark li {
+      background: #444;
+    }
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .actions button.edit { background-color: var(--edit); color: white; }
+    .actions button.delete { background-color: var(--delete); color: white; }
+    .actions button.toggle { background-color: var(--accent); color: white; }
+    .quote {
+      margin: 20px 0;
+      font-style: italic;
+      text-align: center;
+      color: #6d4c41;
+    }
+    @media (max-width: 600px) {
+      .inputs {
+        flex-direction: column;
+      }
+      .buttons {
+        justify-content: center;
+      }
+      .filter-theme-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body class="light">
+  <div class="container">
+    <h1>To-Do List</h1>
+    <div class="quote" id="quote">"Push yourself, because no one else is going to do it for you"</div>
+    <div class="input-group">
+      <div class="inputs">
+        <input type="text" id="taskInput" placeholder="Enter task">
+        <input type="datetime-local" id="taskTime">
+        <input type="text" id="taskCategory" placeholder="Category (e.g., Work, Personal)">
+        <button onclick="addTask()" style="background-color: #4caf50; color: white; border: none; width: 90px;">Add</button>
+      </div>
+    </div>
+    <div class="filter-theme-row">
+      <select id="filter" onchange="renderTasks()">
+        <option value="all">All</option>
+        <option value="completed">Completed</option>
+        <option value="pending">Pending</option>
+      </select>
+      <button onclick="toggleTheme()" style="width: 90px;">Toggle</button>
+    </div>
+    <progress id="progressBar" max="100" value="0" style="width:100%; height:20px; margin: 10px 0;"></progress>
+    <ul id="taskList"></ul>
+  </div>
+  <audio id="reminderSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
+  <script>
+    const quotes = [
+      "Believe in yourself!",
+      "Stay focused and never give up!",
+      "Success is the sum of small efforts.",
+      "Do something today your future self will thank you for.",
+      "Push yourself, because no one else is going to do it for you."
+    ];
+    document.getElementById('quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+    function addTask() {
+      const text = document.getElementById('taskInput').value.trim();
+      const time = document.getElementById('taskTime').value;
+      const category = document.getElementById('taskCategory').value.trim();
+      if (!text) return;
+      tasks.push({ text, time, category, completed: false });
+      document.getElementById('taskInput').value = '';
+      document.getElementById('taskTime').value = '';
+      document.getElementById('taskCategory').value = '';
+      saveTasks();
+      renderTasks();
+    }
+    function toggleComplete(index) {
+      const task = tasks[index];
+      task.completed = !task.completed;
+      saveTasks();
+      renderTasks();
+    }
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+    function editTask(index) {
+      const newText = prompt('Edit task:', tasks[index].text);
+      if (newText) {
+        tasks[index].text = newText.trim();
+        saveTasks();
+        renderTasks();
+      }
+    }
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark');
+      body.classList.toggle('light');
+    }
+    function setReminder(task) {
+      if (task.time) {
+        const timeDiff = new Date(task.time) - new Date();
+        if (timeDiff > 0) {
+          setTimeout(() => {
+            if (Notification.permission === 'granted') {
+              new Notification(`Task Reminder: ${task.text}`, {
+                body: `Category: ${task.category || 'General'}`
+              });
+            } else {
+              alert(`Reminder: ${task.text} - ${task.category}`);
+            }
+            document.getElementById('reminderSound').play();
+          }, timeDiff);
+        }
+      }
+    }
+    function enableDragAndDrop() {
+      const list = document.getElementById('taskList');
+      let dragged;
+      list.querySelectorAll('li').forEach((item, index) => {
+        item.draggable = true;
+        item.ondragstart = () => dragged = index;
+        item.ondragover = e => e.preventDefault();
+        item.ondrop = () => {
+          const temp = tasks[dragged];
+          tasks[dragged] = tasks[index];
+          tasks[index] = temp;
+          saveTasks();
+          renderTasks();
+        };
+      });
+    }
+    function updateProgress() {
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.completed).length;
+      const progress = total ? (completed / total) * 100 : 0;
+      document.getElementById('progressBar').value = progress;
+    }
+    function renderTasks() {
+      const list = document.getElementById('taskList');
+      const filter = document.getElementById('filter').value;
+      list.innerHTML = '';
+      tasks.forEach((task, index) => {
+        if (filter === 'completed' && !task.completed) return;
+        if (filter === 'pending' && task.completed) return;
+        const li = document.createElement('li');
+        li.className = task.completed ? 'completed' : '';
+        const span = document.createElement('span');
+        span.innerHTML = `<strong>${task.text}</strong> <small>(${task.category || 'No category'})</small><br><small>${task.time ? new Date(task.time).toLocaleString() : 'No date'}</small>`;
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = task.completed ? 'Mark Pending' : 'Mark Completed';
+        toggleBtn.className = 'toggle';
+        toggleBtn.onclick = () => toggleComplete(index);
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.className = 'edit';
+        editBtn.onclick = () => editTask(index);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.className = 'delete';
+        delBtn.onclick = () => deleteTask(index);
+        actions.appendChild(toggleBtn);
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        li.appendChild(span);
+        li.appendChild(actions);
+        list.appendChild(li);
+        setReminder(task);
+      });
+      updateProgress();
+      enableDragAndDrop();
+    }
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+    renderTasks();
+  </script>
+</body>
+</html>
